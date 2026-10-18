@@ -72,8 +72,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .table { display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); gap: 14px; align-items: start; }
 .table > div { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 @media (max-width: 720px) { .table { grid-template-columns: minmax(0, 1fr); } }
-.studios { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 12px; }
-.studios .pl { margin-bottom: 0; }
 .log { margin-top: 16px; }
 .panel { background: var(--desk-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
 
@@ -175,10 +173,16 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .log li { padding: 4px 0 4px 8px; border-left: 3px solid var(--c, var(--line)); margin-bottom: 3px; color: #dcd8e0; }
 
 /* studio board */
-.studio { margin-top: 16px; }
+.studio { margin-bottom: 16px; }
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; }
-.tab { background: var(--desk-2); border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 6px 14px; cursor: pointer; border-top: 4px solid var(--c); }
-.tab.on { background: var(--paper); color: var(--ink); font-weight: 700; }
+.tab { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; background: var(--desk-2); border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 6px 14px; cursor: pointer; border-top: 4px solid var(--c); }
+.tab.on { background: var(--paper); color: var(--ink); }
+.tab.cur .tname2::after { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-left: 6px; animation: pulse 1s infinite alternate; }
+.tname2 { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.tname2 small { font-weight: 400; opacity: .7; }
+.tstats { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tab.on .st.rep { color: #a07c00; } .tab.on .st.money { color: #b86f00; } .tab.on .st.hype { color: var(--hype); } .tab.on .st.debt { color: var(--producer); }
+.st.left { color: var(--soft); font-weight: 400; } .tab.on .st.left { color: var(--ink-2); }
 .sboard { background: var(--paper); color: var(--ink); border-radius: 0 12px 12px 12px; padding: 14px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px 18px; border-top: 6px solid var(--c); }
 .sboard > div { min-width: 0; }
 .sres { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; }
@@ -1512,15 +1516,6 @@ function renderMarket() {
 
 /* ---------------- players & log ---------------- */
 
-function renderStudiosBar() {
-  const rows = S.players.map((p) => `<button type="button" class="pl${S.cur === p.id ? ' cur' : ''}${S.view === p.id ? ' viewing' : ''}" data-act="view" data-v="${p.id}" style="--c:${p.color}">
-      <span class="pname">${S.first === p.id ? '<span class="first" title="1st player">1st</span>' : ''}${esc(p.name)}${p.ai ? ' <small>AI</small>' : ''}</span>
-      <span class="pstats"><span class="st rep" title="Reputation">${p.rep}★</span><span class="st money" title="Money">${p.money}¥</span><span class="st hype" title="Hype">${p.hype}h</span>${p.debts.length ? `<span class="st debt" title="Debt cards">${p.debts.length} debt</span>` : ''}</span>
-      <span class="pmeta">${p.staff.length} staff · ${p.released.length} released · ${p.staff.filter((s) => s.token).length} actions left${p.passed && S.phase === 'production' ? ' · done' : ''}</span>
-    </button>`).join('');
-  return `<nav class="studios" aria-label="Studios">${rows}</nav>`;
-}
-
 function renderLog() {
   const logs = S.log.slice(0, 60).map((l) => `<li${l.color ? ` style="--c:${l.color}"` : ''}>${esc(l.msg)}</li>`).join('');
   return `<section class="panel log"><h2>Studio news</h2><ol>${logs}</ol></section>`;
@@ -1564,7 +1559,10 @@ function renderStudio() {
 
   const debts = p.debts.map((d) => `<span class="debt-card">Debt <b>${debtCost(d)}¥</b></span>`).join('') || '<span class="muted">No debts</span>';
   const released = p.released.map((r) => `<div class="rel"><span class="rtitle">${esc(r.title)}</span><span class="rgen">${r.genres.map(gBadge).join('')}</span><span>${r.pop}♥</span></div>`).join('') || '<span class="muted">Nothing released yet</span>';
-  const tabs = S.players.map((x) => `<button type="button" class="tab${x.id === p.id ? ' on' : ''}" data-act="view" data-v="${x.id}" style="--c:${x.color}">${esc(x.name)}</button>`).join('');
+  const tabs = S.players.map((x) => `<button type="button" class="tab${x.id === p.id ? ' on' : ''}${S.cur === x.id ? ' cur' : ''}" data-act="view" data-v="${x.id}" style="--c:${x.color}">
+      <span class="tname2">${S.first === x.id ? '<span class="first" title="1st player">1st</span>' : ''}${esc(x.name)}${x.ai ? ' <small>AI</small>' : ''}</span>
+      <span class="tstats"><span class="st rep">${x.rep}★</span><span class="st money">${x.money}¥</span><span class="st hype">${x.hype}h</span>${x.debts.length ? `<span class="st debt">${x.debts.length} debt</span>` : ''}<span class="st left">${x.staff.filter((s) => s.token).length} act.</span></span>
+    </button>`).join('');
   const salary = Math.max(0, sum(p.staff.map((s) => (s.card.dead ? 1 : 2))) - (hasSkill(p, 'cold') ? genkiCount(p) : 0));
 
   return `<section class="studio" style="--c:${p.color}">
@@ -1699,11 +1697,11 @@ function render() {
   const app = $('#app');
   if (!S) { app.innerHTML = ''; }
   else {
-    app.innerHTML = `${renderHeader()}${renderStudiosBar()}${renderPrompt()}
+    app.innerHTML = `${renderHeader()}${renderPrompt()}${renderStudio()}
       <main class="table">
         <div class="col-a">${renderActions()}</div>
         <div class="col-b">${renderTrends()}${renderScripts()}${renderMarket()}</div>
-      </main>${renderStudio()}${renderLog()}`;
+      </main>${renderLog()}`;
   }
   let m = '';
   if (S && S.ui && S.ui.mode === 'release' && !modal) m = renderRelease();

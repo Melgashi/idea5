@@ -72,8 +72,6 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .table { display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); gap: 14px; align-items: start; }
 .table > div { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
 @media (max-width: 720px) { .table { grid-template-columns: minmax(0, 1fr); } }
-.studios { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 12px; }
-.studios .pl { margin-bottom: 0; }
 .log { margin-top: 16px; }
 .panel { background: var(--desk-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
 
@@ -175,10 +173,16 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .log li { padding: 4px 0 4px 8px; border-left: 3px solid var(--c, var(--line)); margin-bottom: 3px; color: #dcd8e0; }
 
 /* studio board */
-.studio { margin-top: 16px; }
+.studio { margin-bottom: 16px; }
 .tabs { display: flex; flex-wrap: wrap; gap: 4px; }
-.tab { background: var(--desk-2); border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 6px 14px; cursor: pointer; border-top: 4px solid var(--c); }
-.tab.on { background: var(--paper); color: var(--ink); font-weight: 700; }
+.tab { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; text-align: left; background: var(--desk-2); border: 1px solid var(--line); border-bottom: 0; border-radius: 10px 10px 0 0; padding: 6px 14px; cursor: pointer; border-top: 4px solid var(--c); }
+.tab.on { background: var(--paper); color: var(--ink); }
+.tab.cur .tname2::after { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-left: 6px; animation: pulse 1s infinite alternate; }
+.tname2 { font-weight: 700; display: flex; align-items: center; gap: 6px; }
+.tname2 small { font-weight: 400; opacity: .7; }
+.tstats { display: flex; flex-wrap: wrap; gap: 8px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.tab.on .st.rep { color: #a07c00; } .tab.on .st.money { color: #b86f00; } .tab.on .st.hype { color: var(--hype); } .tab.on .st.debt { color: var(--producer); }
+.st.left { color: var(--soft); font-weight: 400; } .tab.on .st.left { color: var(--ink-2); }
 .sboard { background: var(--paper); color: var(--ink); border-radius: 0 12px 12px 12px; padding: 14px; display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 14px 18px; border-top: 6px solid var(--c); }
 .sboard > div { min-width: 0; }
 .sres { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; }

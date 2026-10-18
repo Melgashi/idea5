@@ -151,15 +151,6 @@ function renderMarket() {
 
 /* ---------------- players & log ---------------- */
 
-function renderStudiosBar() {
-  const rows = S.players.map((p) => `<button type="button" class="pl${S.cur === p.id ? ' cur' : ''}${S.view === p.id ? ' viewing' : ''}" data-act="view" data-v="${p.id}" style="--c:${p.color}">
-      <span class="pname">${S.first === p.id ? '<span class="first" title="1st player">1st</span>' : ''}${esc(p.name)}${p.ai ? ' <small>AI</small>' : ''}</span>
-      <span class="pstats"><span class="st rep" title="Reputation">${p.rep}★</span><span class="st money" title="Money">${p.money}¥</span><span class="st hype" title="Hype">${p.hype}h</span>${p.debts.length ? `<span class="st debt" title="Debt cards">${p.debts.length} debt</span>` : ''}</span>
-      <span class="pmeta">${p.staff.length} staff · ${p.released.length} released · ${p.staff.filter((s) => s.token).length} actions left${p.passed && S.phase === 'production' ? ' · done' : ''}</span>
-    </button>`).join('');
-  return `<nav class="studios" aria-label="Studios">${rows}</nav>`;
-}
-
 function renderLog() {
   const logs = S.log.slice(0, 60).map((l) => `<li${l.color ? ` style="--c:${l.color}"` : ''}>${esc(l.msg)}</li>`).join('');
   return `<section class="panel log"><h2>Studio news</h2><ol>${logs}</ol></section>`;
@@ -203,7 +194,10 @@ function renderStudio() {
 
   const debts = p.debts.map((d) => `<span class="debt-card">Debt <b>${debtCost(d)}¥</b></span>`).join('') || '<span class="muted">No debts</span>';
   const released = p.released.map((r) => `<div class="rel"><span class="rtitle">${esc(r.title)}</span><span class="rgen">${r.genres.map(gBadge).join('')}</span><span>${r.pop}♥</span></div>`).join('') || '<span class="muted">Nothing released yet</span>';
-  const tabs = S.players.map((x) => `<button type="button" class="tab${x.id === p.id ? ' on' : ''}" data-act="view" data-v="${x.id}" style="--c:${x.color}">${esc(x.name)}</button>`).join('');
+  const tabs = S.players.map((x) => `<button type="button" class="tab${x.id === p.id ? ' on' : ''}${S.cur === x.id ? ' cur' : ''}" data-act="view" data-v="${x.id}" style="--c:${x.color}">
+      <span class="tname2">${S.first === x.id ? '<span class="first" title="1st player">1st</span>' : ''}${esc(x.name)}${x.ai ? ' <small>AI</small>' : ''}</span>
+      <span class="tstats"><span class="st rep">${x.rep}★</span><span class="st money">${x.money}¥</span><span class="st hype">${x.hype}h</span>${x.debts.length ? `<span class="st debt">${x.debts.length} debt</span>` : ''}<span class="st left">${x.staff.filter((s) => s.token).length} act.</span></span>
+    </button>`).join('');
   const salary = Math.max(0, sum(p.staff.map((s) => (s.card.dead ? 1 : 2))) - (hasSkill(p, 'cold') ? genkiCount(p) : 0));
 
   return `<section class="studio" style="--c:${p.color}">
@@ -338,11 +332,11 @@ function render() {
   const app = $('#app');
   if (!S) { app.innerHTML = ''; }
   else {
-    app.innerHTML = `${renderHeader()}${renderStudiosBar()}${renderPrompt()}
+    app.innerHTML = `${renderHeader()}${renderPrompt()}${renderStudio()}
       <main class="table">
         <div class="col-a">${renderActions()}</div>
         <div class="col-b">${renderTrends()}${renderScripts()}${renderMarket()}</div>
-      </main>${renderStudio()}${renderLog()}`;
+      </main>${renderLog()}`;
   }
   let m = '';
   if (S && S.ui && S.ui.mode === 'release' && !modal) m = renderRelease();
