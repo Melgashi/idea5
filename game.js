@@ -69,7 +69,7 @@ function matchCount(genres, trendGenres) {
 /* ---------------- human input ---------------- */
 
 function ask(mode, opts = {}) {
-  return new Promise((res) => { S.ui = { mode, ...opts, res }; render(); });
+  return new Promise((res) => { S.ui = { mode, ...opts, res }; render(); if (mode === 'reveal' || mode === 'pick') scrollToEl('.scripts'); });
 }
 function answer(v) {
   const u = S.ui;
@@ -188,6 +188,7 @@ async function takeTurn(p) {
       log(`${p.name} ends their Production Phase.`, p);
     } else {
       await doAction(p, r.staff, r.act);
+      scrollToEl('.studio');
     }
   }
   await endTurn(p);

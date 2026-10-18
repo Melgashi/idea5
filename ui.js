@@ -348,13 +348,14 @@ function render() {
 
 /* ---------------- input ---------------- */
 
-// Bring the action board's top edge just below the sticky turn prompt.
-function scrollToActions() {
-  const board = document.querySelector('.actions');
-  if (!board) return;
+// Scroll so an element's top edge sits just below the sticky turn prompt.
+function scrollToEl(sel) {
+  const el = document.querySelector(sel);
+  if (!el) return;
   const prompt = document.querySelector('.prompt');
   const offset = (prompt ? prompt.getBoundingClientRect().height : 0) + 24;
-  const top = Math.max(0, board.getBoundingClientRect().top + window.scrollY - offset);
+  const top = Math.max(0, el.getBoundingClientRect().top + window.scrollY - offset);
+  if (Math.abs(top - window.scrollY) < 4) return;
   const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
   window.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
 }
@@ -393,7 +394,7 @@ function handle(act, v) {
       if (u.mode !== 'turn') break;
       u.sel = u.sel === +v ? null : +v;
       render();
-      if (u.sel != null) scrollToActions();
+      if (u.sel != null) scrollToEl('.actions');
       return;
     case 'space': if (u.mode === 'turn' && u.sel != null && legalSpace(S.players[u.pid], u.sel, v)) answer({ act: v, staff: u.sel }); return;
     case 'pass': if (u.mode === 'turn') answer({ pass: true }); return;
