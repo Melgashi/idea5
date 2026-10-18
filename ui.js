@@ -151,15 +151,18 @@ function renderMarket() {
 
 /* ---------------- players & log ---------------- */
 
-function renderPlayers() {
+function renderStudiosBar() {
   const rows = S.players.map((p) => `<button type="button" class="pl${S.cur === p.id ? ' cur' : ''}${S.view === p.id ? ' viewing' : ''}" data-act="view" data-v="${p.id}" style="--c:${p.color}">
       <span class="pname">${S.first === p.id ? '<span class="first" title="1st player">1st</span>' : ''}${esc(p.name)}${p.ai ? ' <small>AI</small>' : ''}</span>
       <span class="pstats"><span class="st rep" title="Reputation">${p.rep}★</span><span class="st money" title="Money">${p.money}¥</span><span class="st hype" title="Hype">${p.hype}h</span>${p.debts.length ? `<span class="st debt" title="Debt cards">${p.debts.length} debt</span>` : ''}</span>
       <span class="pmeta">${p.staff.length} staff · ${p.released.length} released · ${p.staff.filter((s) => s.token).length} actions left${p.passed && S.phase === 'production' ? ' · done' : ''}</span>
     </button>`).join('');
+  return `<nav class="studios" aria-label="Studios">${rows}</nav>`;
+}
+
+function renderLog() {
   const logs = S.log.slice(0, 60).map((l) => `<li${l.color ? ` style="--c:${l.color}"` : ''}>${esc(l.msg)}</li>`).join('');
-  return `<section class="panel players"><h2>Studios</h2>${rows}</section>
-    <section class="panel log"><h2>Studio news</h2><ol>${logs}</ol></section>`;
+  return `<section class="panel log"><h2>Studio news</h2><ol>${logs}</ol></section>`;
 }
 
 /* ---------------- studio board ---------------- */
@@ -335,12 +338,11 @@ function render() {
   const app = $('#app');
   if (!S) { app.innerHTML = ''; }
   else {
-    app.innerHTML = `${renderHeader()}${renderPrompt()}
+    app.innerHTML = `${renderHeader()}${renderStudiosBar()}${renderPrompt()}
       <main class="table">
         <div class="col-a">${renderActions()}</div>
         <div class="col-b">${renderTrends()}${renderScripts()}${renderMarket()}</div>
-        <div class="col-c">${renderPlayers()}</div>
-      </main>${renderStudio()}`;
+      </main>${renderStudio()}${renderLog()}`;
   }
   let m = '';
   if (S && S.ui && S.ui.mode === 'release' && !modal) m = renderRelease();
@@ -382,7 +384,16 @@ function handle(act, v) {
   if (!S || !u) return;
   switch (act) {
     case 'view': S.view = +v; break;
-    case 'staff': if (u.mode === 'turn') u.sel = u.sel === +v ? null : +v; break;
+    case 'staff':
+      if (u.mode !== 'turn') break;
+      u.sel = u.sel === +v ? null : +v;
+      render();
+      if (u.sel != null) {
+        const target = document.querySelector('.space.can') || document.querySelector('.actions');
+        const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (target) target.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
+      }
+      return;
     case 'space': if (u.mode === 'turn' && u.sel != null && legalSpace(S.players[u.pid], u.sel, v)) answer({ act: v, staff: u.sel }); return;
     case 'pass': if (u.mode === 'turn') answer({ pass: true }); return;
     case 'pile': if (u.mode === 'reveal') answer(v); return;

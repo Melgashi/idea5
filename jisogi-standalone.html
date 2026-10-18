@@ -69,10 +69,12 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 @keyframes pulse { from { opacity: .3; } to { opacity: 1; } }
 
 /* table grid */
-.table { display: grid; grid-template-columns: minmax(250px, 300px) minmax(0, 1fr) minmax(230px, 280px); gap: 14px; align-items: start; }
+.table { display: grid; grid-template-columns: minmax(250px, 320px) minmax(0, 1fr); gap: 14px; align-items: start; }
 .table > div { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-@media (max-width: 1150px) { .table { grid-template-columns: minmax(240px, 300px) minmax(0, 1fr); } .col-c { grid-column: 1 / -1; display: grid !important; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); } }
 @media (max-width: 720px) { .table { grid-template-columns: minmax(0, 1fr); } }
+.studios { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-top: 12px; }
+.studios .pl { margin-bottom: 0; }
+.log { margin-top: 16px; }
 .panel { background: var(--desk-2); border: 1px solid var(--line); border-radius: 12px; padding: 12px; min-width: 0; }
 
 /* action board */
@@ -169,7 +171,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .pstats { display: flex; flex-wrap: wrap; gap: 8px; font-variant-numeric: tabular-nums; font-weight: 700; }
 .st.rep { color: var(--rep); } .st.money { color: var(--money); } .st.hype { color: #c49be6; } .st.debt { color: #ff8a80; }
 .pmeta { font-size: 11px; color: var(--soft); }
-.log ol { list-style: none; margin: 0; padding: 0; max-height: 380px; overflow-y: auto; font-size: 12px; }
+.log ol { list-style: none; margin: 0; padding: 0; max-height: 320px; overflow-y: auto; font-size: 12px; }
 .log li { padding: 4px 0 4px 8px; border-left: 3px solid var(--c, var(--line)); margin-bottom: 3px; color: #dcd8e0; }
 
 /* studio board */
@@ -1510,15 +1512,18 @@ function renderMarket() {
 
 /* ---------------- players & log ---------------- */
 
-function renderPlayers() {
+function renderStudiosBar() {
   const rows = S.players.map((p) => `<button type="button" class="pl${S.cur === p.id ? ' cur' : ''}${S.view === p.id ? ' viewing' : ''}" data-act="view" data-v="${p.id}" style="--c:${p.color}">
       <span class="pname">${S.first === p.id ? '<span class="first" title="1st player">1st</span>' : ''}${esc(p.name)}${p.ai ? ' <small>AI</small>' : ''}</span>
       <span class="pstats"><span class="st rep" title="Reputation">${p.rep}★</span><span class="st money" title="Money">${p.money}¥</span><span class="st hype" title="Hype">${p.hype}h</span>${p.debts.length ? `<span class="st debt" title="Debt cards">${p.debts.length} debt</span>` : ''}</span>
       <span class="pmeta">${p.staff.length} staff · ${p.released.length} released · ${p.staff.filter((s) => s.token).length} actions left${p.passed && S.phase === 'production' ? ' · done' : ''}</span>
     </button>`).join('');
+  return `<nav class="studios" aria-label="Studios">${rows}</nav>`;
+}
+
+function renderLog() {
   const logs = S.log.slice(0, 60).map((l) => `<li${l.color ? ` style="--c:${l.color}"` : ''}>${esc(l.msg)}</li>`).join('');
-  return `<section class="panel players"><h2>Studios</h2>${rows}</section>
-    <section class="panel log"><h2>Studio news</h2><ol>${logs}</ol></section>`;
+  return `<section class="panel log"><h2>Studio news</h2><ol>${logs}</ol></section>`;
 }
 
 /* ---------------- studio board ---------------- */
@@ -1694,12 +1699,11 @@ function render() {
   const app = $('#app');
   if (!S) { app.innerHTML = ''; }
   else {
-    app.innerHTML = `${renderHeader()}${renderPrompt()}
+    app.innerHTML = `${renderHeader()}${renderStudiosBar()}${renderPrompt()}
       <main class="table">
         <div class="col-a">${renderActions()}</div>
         <div class="col-b">${renderTrends()}${renderScripts()}${renderMarket()}</div>
-        <div class="col-c">${renderPlayers()}</div>
-      </main>${renderStudio()}`;
+      </main>${renderStudio()}${renderLog()}`;
   }
   let m = '';
   if (S && S.ui && S.ui.mode === 'release' && !modal) m = renderRelease();
@@ -1741,7 +1745,16 @@ function handle(act, v) {
   if (!S || !u) return;
   switch (act) {
     case 'view': S.view = +v; break;
-    case 'staff': if (u.mode === 'turn') u.sel = u.sel === +v ? null : +v; break;
+    case 'staff':
+      if (u.mode !== 'turn') break;
+      u.sel = u.sel === +v ? null : +v;
+      render();
+      if (u.sel != null) {
+        const target = document.querySelector('.space.can') || document.querySelector('.actions');
+        const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (target) target.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
+      }
+      return;
     case 'space': if (u.mode === 'turn' && u.sel != null && legalSpace(S.players[u.pid], u.sel, v)) answer({ act: v, staff: u.sel }); return;
     case 'pass': if (u.mode === 'turn') answer({ pass: true }); return;
     case 'pile': if (u.mode === 'reveal') answer(v); return;
