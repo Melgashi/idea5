@@ -1713,6 +1713,17 @@ function render() {
 
 /* ---------------- input ---------------- */
 
+// Bring the action board's top edge just below the sticky turn prompt.
+function scrollToActions() {
+  const board = document.querySelector('.actions');
+  if (!board) return;
+  const prompt = document.querySelector('.prompt');
+  const offset = (prompt ? prompt.getBoundingClientRect().height : 0) + 24;
+  const top = Math.max(0, board.getBoundingClientRect().top + window.scrollY - offset);
+  const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
+}
+
 function humanFree() {
   const u = S && S.ui;
   if (!u || (u.mode !== 'turn' && u.mode !== 'release')) return null;
@@ -1747,11 +1758,7 @@ function handle(act, v) {
       if (u.mode !== 'turn') break;
       u.sel = u.sel === +v ? null : +v;
       render();
-      if (u.sel != null) {
-        const target = document.querySelector('.space.can') || document.querySelector('.actions');
-        const smooth = !matchMedia('(prefers-reduced-motion: reduce)').matches;
-        if (target) target.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'center' });
-      }
+      if (u.sel != null) scrollToActions();
       return;
     case 'space': if (u.mode === 'turn' && u.sel != null && legalSpace(S.players[u.pid], u.sel, v)) answer({ act: v, staff: u.sel }); return;
     case 'pass': if (u.mode === 'turn') answer({ pass: true }); return;
