@@ -295,6 +295,31 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .aidt td.t-writer { background: var(--writer); color: #fff; } .aidt td.t-artist { background: var(--artist); color: #fff; } .aidt td.t-producer { background: var(--producer); color: #fff; } .aidt td.t-strat { background: var(--strat); color: #fff; }
 .aidt td.red { color: var(--producer); font-weight: 700; }
 
+/* achievements */
+.modal.ach { width: min(1080px, 100%); }
+.modal.ach h3 { color: var(--ink-2); margin-top: 18px; }
+.ach-sum { margin: 0; }
+.ach-sum b { font-family: var(--display); font-weight: 400; font-size: 18px; color: var(--producer); }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.ach-card { display: flex; flex-direction: column; gap: 2px; background: #fff; border: 2px solid var(--paper-2); border-radius: 10px; padding: 0 10px 10px; overflow: hidden; min-width: 0; }
+.ach-card.cleared { border-color: var(--rep); }
+.ach-head { display: flex; justify-content: space-between; align-items: center; margin: 0 -10px 6px; padding: 4px 10px; background: var(--producer); color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.ach-head.easy { background: var(--writer); }
+.ach-head.multi { background: var(--director); }
+.medal { background: var(--rep); color: var(--ink); border-radius: 50%; width: 20px; height: 20px; display: grid; place-items: center; font-size: 12px; }
+.ach-title { font-size: 15px; }
+.ach-goal { font-size: 12px; color: var(--ink-2); }
+.ach-empty { font-size: 12px; color: var(--ink-2); margin: 10px 0 0; }
+.ach-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ach-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 6px; background: var(--paper); font-size: 13px; }
+.ach-list li.top { background: #fbf1c7; }
+.ach-rank { font-weight: 700; color: var(--ink-2); text-align: center; }
+.ach-name { min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.ach-name small { display: block; font-size: 11px; color: var(--ink-2); font-weight: 400; }
+.ach-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; border-radius: 99px; padding: 1px 7px; background: var(--paper-2); color: var(--ink-2); }
+.ach-tag.win { background: var(--artist); color: #fff; }
+.ach-score { font-family: var(--display); font-weight: 400; font-size: 16px; font-variant-numeric: tabular-nums; }
+.newbest { margin: 6px 0; padding: 6px 10px; border-radius: 8px; background: #fbf1c7; font-weight: 700; }
 #preview { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: 260px; border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.6); pointer-events: none; z-index: 60; opacity: 0; transform: translateY(8px); transition: opacity .12s, transform .12s; }
 #preview.on { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -1233,6 +1258,7 @@ function finish() {
   S.phase = 'end';
   S.over = true;
   for (const p of S.players) if (p.debts.length) log(`${p.name} loses ${2 * p.debts.length}★ for unpaid debts.`, p);
+  S.newScores = recordGame();
   render();
   openModal('end');
 }
@@ -1364,6 +1390,122 @@ async function aiTurn(p) {
   aiPlaceParts(p);
 }
 
+// Best scores for each solo challenge and each player count.
+// Always kept in this browser; when the page runs as a published claude.ai
+// artifact they are also kept in the viewer's private storage there.
+
+const SCORE_KEY = 'jisogi-scores-v1';
+const KEEP_PER_MODE = 10;
+const SCORE_MODES = [...SOLO.map((s, i) => 'solo' + (i + 1)), 'p2', 'p3', 'p4'];
+
+let scores = [];
+let scoreDoc = null;
+let scoreWrite = Promise.resolve();
+
+const modeKey = (cfg) => (cfg.solo != null ? 'solo' + (cfg.solo + 1) : 'p' + cfg.players.length);
+const byRank = (a, b) => b.score - a.score || b.money - a.money || a.date.localeCompare(b.date);
+const scoresFor = (mode) => scores.filter((r) => r.mode === mode).sort(byRank);
+
+function trimScores(list) {
+  const seen = new Set();
+  const out = [];
+  for (const mode of SCORE_MODES) {
+    list.filter((r) => r.mode === mode && !seen.has(r.id) && seen.add(r.id)).sort(byRank).slice(0, KEEP_PER_MODE).forEach((r) => out.push(r));
+  }
+  return out;
+}
+
+function loadLocalScores() {
+  try { const v = JSON.parse(localStorage.getItem(SCORE_KEY)); return Array.isArray(v) ? v : []; } catch { return []; }
+}
+function saveLocalScores() {
+  try { localStorage.setItem(SCORE_KEY, JSON.stringify(scores)); } catch { /* storage blocked: scores last for this visit */ }
+}
+function saveRemoteScores() {
+  if (!scoreDoc) return;
+  const body = { records: JSON.parse(JSON.stringify(scores)) };
+  scoreWrite = scoreWrite.then(() => scoreDoc.set(body)).catch(() => {});
+}
+
+async function initScores() {
+  scores = trimScores(loadLocalScores());
+  const c = window.claude;
+  if (!c || !c.use) return;
+  try {
+    const [db, user] = await Promise.all([c.use('db'), c.use('user')]);
+    if (!db || !user) return;
+    const uid = await user.id();
+    if (!uid) return;
+    const ref = db.doc('data/users/' + uid + '/scores');
+    const snap = await ref.get();
+    const remote = snap.exists && Array.isArray(snap.data().records) ? snap.data().records : [];
+    scoreDoc = ref;
+    const remoteIds = new Set(remote.map((r) => r.id));
+    scores = trimScores([...scores, ...remote]);
+    saveLocalScores();
+    if (scores.some((r) => !remoteIds.has(r.id))) saveRemoteScores();
+    render();
+  } catch { /* account storage unavailable: browser storage still works */ }
+}
+
+// Records every human studio's result. Returns where each one placed.
+function recordGame() {
+  const mode = modeKey(S.cfg);
+  const ranked = S.players.slice().sort((a, b) => score(b) - score(a) || b.money - a.money);
+  const stamp = Date.now().toString(36);
+  const recs = S.players.filter((p) => !p.ai).map((p) => ({
+    id: `${stamp}-${p.id}`, mode, name: p.name, score: score(p), rep: p.rep, debts: p.debts.length,
+    money: p.money, released: p.released.length, date: new Date().toISOString(),
+    place: ranked.indexOf(p) + 1, of: S.players.length,
+    won: S.solo ? !!S.solo.check(p) : ranked[0] === p,
+  }));
+  if (!recs.length) return [];
+  scores = trimScores([...scores, ...recs]);
+  saveLocalScores();
+  saveRemoteScores();
+  const list = scoresFor(mode);
+  return recs.map((r) => ({ rec: r, rank: list.findIndex((x) => x.id === r.id) + 1 })).filter((x) => x.rank > 0);
+}
+
+function modeName(mode) {
+  if (mode.startsWith('solo')) { const s = SOLO[+mode.slice(4) - 1]; return `Solo #${s.n} · ${s.name}`; }
+  return `${mode.slice(1)}-studio games`;
+}
+
+function renderAchievements() {
+  const fmt = (d) => new Date(d).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  const table = (mode, multi) => {
+    const list = scoresFor(mode).slice(0, 5);
+    if (!list.length) return '<p class="ach-empty">No finished games yet.</p>';
+    return `<ol class="ach-list">${list.map((r, i) => `<li class="${i === 0 ? 'top' : ''}">
+        <span class="ach-rank">${i + 1}</span>
+        <span class="ach-name">${esc(r.name)}<small>${fmt(r.date)} · ${r.released} released${r.debts ? ` · ${r.debts} debt` : ''}</small></span>
+        ${multi ? `<span class="ach-tag${r.place === 1 ? ' win' : ''}">${r.place === 1 ? 'Won' : ordinal(r.place)}</span>` : r.won ? '<span class="ach-tag win">Cleared</span>' : '<span class="ach-tag">Failed</span>'}
+        <b class="ach-score">${r.score}★</b></li>`).join('')}</ol>`;
+  };
+  const solo = SOLO.map((s, i) => {
+    const mode = 'solo' + (i + 1);
+    const all = scores.filter((r) => r.mode === mode);
+    const cleared = all.some((r) => r.won);
+    return `<div class="ach-card${cleared ? ' cleared' : ''}">
+      <div class="ach-head${s.n <= 2 ? ' easy' : ''}"><span>Solo #${s.n}</span>${cleared ? '<span class="medal" title="Challenge cleared">★</span>' : ''}</div>
+      <b class="ach-title">${esc(s.name)}</b><span class="ach-goal">${esc(s.goal)}</span>
+      ${table(mode, false)}</div>`;
+  }).join('');
+  const multi = [2, 3, 4].map((n) => `<div class="ach-card">
+      <div class="ach-head multi"><span>${n} studios</span></div>
+      <b class="ach-title">${n}-player games</b><span class="ach-goal">Best final score of a human studio</span>
+      ${table('p' + n, true)}</div>`).join('');
+  const clearedCount = SOLO.filter((s, i) => scores.some((r) => r.mode === 'solo' + (i + 1) && r.won)).length;
+  return `<div class="modal ach"><h2>Achievements</h2>
+    <p class="ach-sum"><b>${clearedCount}/8</b> solo challenges cleared. ${scoreDoc ? 'Scores are saved privately to your claude.ai account.' : 'Scores are saved in this browser.'}</p>
+    <h3>Solo challenges</h3><div class="ach-grid">${solo}</div>
+    <h3>Multiplayer</h3><div class="ach-grid">${multi}</div>
+    <div class="mbtns"><button type="button" class="btn ghost" data-act="setup">New game</button><button type="button" class="btn primary" data-act="close">Close</button></div></div>`;
+}
+
+function ordinal(n) { return n + (['th', 'st', 'nd', 'rd'][n] || 'th'); }
+
 // Rendering and input for JISOGI. render() rebuilds the table from S on every change.
 
 const $ = (s) => document.querySelector(s);
@@ -1402,6 +1544,7 @@ function renderHeader() {
       <label class="speed">AI speed
         <select id="speed">${[[900, 'Slow'], [550, 'Normal'], [180, 'Fast']].map(([v, n]) => `<option value="${v}"${S.delay === v ? ' selected' : ''}>${n}</option>`).join('')}</select>
       </label>
+      <button type="button" class="btn ghost" data-act="ach">Achievements</button>
       <button type="button" class="btn ghost" data-act="aid">Player aid</button>
       <button type="button" class="btn ghost" data-act="setup">New game</button>
     </div>
@@ -1650,10 +1793,11 @@ function renderEnd() {
     const ok = S.solo.check(S.players[0]);
     head = `<p class="verdict ${ok ? 'win' : 'lose'}">${ok ? 'Challenge complete!' : 'Challenge failed.'}</p><p>Goal: ${esc(S.solo.goal)}</p>`;
   } else head = `<p class="verdict win">${esc(ranked[0].name)} wins the investors' support!</p>`;
+  head += (S.newScores || []).map((x) => `<p class="newbest">${x.rank === 1 ? 'New best score' : `#${x.rank} best score`} for ${esc(modeName(x.rec.mode))}: ${esc(x.rec.name)}, ${x.rec.score}★</p>`).join('');
   return `<div class="modal end"><h2>${S.solo ? 'Solo result' : 'Final standings'}</h2>${head}
     <table class="standings"><tr><th>Studio</th><th>Score</th><th>Rep.</th><th>Debts</th><th>Money</th><th>Released</th></tr>
     ${ranked.map((p) => `<tr style="--c:${p.color}"><td><span class="dot"></span>${esc(p.name)}</td><td><b>${score(p)}</b></td><td>${p.rep}</td><td>${p.debts.length ? '−' + 2 * p.debts.length : 0}</td><td>${p.money}¥</td><td>${p.released.length}</td></tr>`).join('')}</table>
-    <div class="mbtns"><button type="button" class="btn ghost" data-act="close">Look at the table</button><button type="button" class="btn primary" data-act="setup">New game</button></div></div>`;
+    <div class="mbtns"><button type="button" class="btn ghost" data-act="close">Look at the table</button><button type="button" class="btn ghost" data-act="ach">Achievements</button><button type="button" class="btn primary" data-act="setup">New game</button></div></div>`;
 }
 
 function renderAid() {
@@ -1689,7 +1833,7 @@ function renderSetup() {
     <p class="lede">Run a broke anime studio for four years. Hire staff, write scripts, chase the trends and release anime before the debts catch up with you.</p>
     <div class="tabs2"><button type="button" class="seg${setup.tab === 'multi' ? ' on' : ''}" data-act="stab" data-v="multi">Multiplayer</button><button type="button" class="seg${setup.tab === 'solo' ? ' on' : ''}" data-act="stab" data-v="solo">Solo challenges</button></div>
     ${setup.tab === 'multi' ? multi : solo}
-    <div class="mbtns">${S ? '<button type="button" class="btn ghost" data-act="close">Back to game</button>' : ''}<button type="button" class="btn ghost" data-act="aid">Player aid</button><button type="button" class="btn primary" data-act="start">Start game</button></div></div>`;
+    <div class="mbtns">${S ? '<button type="button" class="btn ghost" data-act="close">Back to game</button>' : ''}<button type="button" class="btn ghost" data-act="ach">Achievements</button><button type="button" class="btn ghost" data-act="aid">Player aid</button><button type="button" class="btn primary" data-act="start">Start game</button></div></div>`;
 }
 
 /* ---------------- render ---------------- */
@@ -1708,6 +1852,7 @@ function render() {
   if (S && S.ui && S.ui.mode === 'release' && !modal) m = renderRelease();
   else if (modal === 'end') m = renderEnd();
   else if (modal === 'aid') m = renderAid();
+  else if (modal === 'ach') m = renderAchievements();
   else if (modal === 'setup' || !S) m = renderSetup();
   $('#modal').innerHTML = m ? `<div class="scrim">${m}</div>` : '';
 }
@@ -1737,6 +1882,7 @@ function handle(act, v) {
   switch (act) {
     case 'setup': openModal('setup'); return;
     case 'aid': openModal('aid'); return;
+    case 'ach': openModal('ach'); return;
     case 'close': closeModal(); render(); return;
     case 'stab': setup.tab = v; render(); return;
     case 'snum': setup.n = +v; render(); return;
@@ -1821,6 +1967,7 @@ document.addEventListener('mouseover', (e) => {
 });
 
 render();
+initScores();
 
 </script>
 </body>

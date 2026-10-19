@@ -36,6 +36,7 @@ function renderHeader() {
       <label class="speed">AI speed
         <select id="speed">${[[900, 'Slow'], [550, 'Normal'], [180, 'Fast']].map(([v, n]) => `<option value="${v}"${S.delay === v ? ' selected' : ''}>${n}</option>`).join('')}</select>
       </label>
+      <button type="button" class="btn ghost" data-act="ach">Achievements</button>
       <button type="button" class="btn ghost" data-act="aid">Player aid</button>
       <button type="button" class="btn ghost" data-act="setup">New game</button>
     </div>
@@ -284,10 +285,11 @@ function renderEnd() {
     const ok = S.solo.check(S.players[0]);
     head = `<p class="verdict ${ok ? 'win' : 'lose'}">${ok ? 'Challenge complete!' : 'Challenge failed.'}</p><p>Goal: ${esc(S.solo.goal)}</p>`;
   } else head = `<p class="verdict win">${esc(ranked[0].name)} wins the investors' support!</p>`;
+  head += (S.newScores || []).map((x) => `<p class="newbest">${x.rank === 1 ? 'New best score' : `#${x.rank} best score`} for ${esc(modeName(x.rec.mode))}: ${esc(x.rec.name)}, ${x.rec.score}★</p>`).join('');
   return `<div class="modal end"><h2>${S.solo ? 'Solo result' : 'Final standings'}</h2>${head}
     <table class="standings"><tr><th>Studio</th><th>Score</th><th>Rep.</th><th>Debts</th><th>Money</th><th>Released</th></tr>
     ${ranked.map((p) => `<tr style="--c:${p.color}"><td><span class="dot"></span>${esc(p.name)}</td><td><b>${score(p)}</b></td><td>${p.rep}</td><td>${p.debts.length ? '−' + 2 * p.debts.length : 0}</td><td>${p.money}¥</td><td>${p.released.length}</td></tr>`).join('')}</table>
-    <div class="mbtns"><button type="button" class="btn ghost" data-act="close">Look at the table</button><button type="button" class="btn primary" data-act="setup">New game</button></div></div>`;
+    <div class="mbtns"><button type="button" class="btn ghost" data-act="close">Look at the table</button><button type="button" class="btn ghost" data-act="ach">Achievements</button><button type="button" class="btn primary" data-act="setup">New game</button></div></div>`;
 }
 
 function renderAid() {
@@ -323,7 +325,7 @@ function renderSetup() {
     <p class="lede">Run a broke anime studio for four years. Hire staff, write scripts, chase the trends and release anime before the debts catch up with you.</p>
     <div class="tabs2"><button type="button" class="seg${setup.tab === 'multi' ? ' on' : ''}" data-act="stab" data-v="multi">Multiplayer</button><button type="button" class="seg${setup.tab === 'solo' ? ' on' : ''}" data-act="stab" data-v="solo">Solo challenges</button></div>
     ${setup.tab === 'multi' ? multi : solo}
-    <div class="mbtns">${S ? '<button type="button" class="btn ghost" data-act="close">Back to game</button>' : ''}<button type="button" class="btn ghost" data-act="aid">Player aid</button><button type="button" class="btn primary" data-act="start">Start game</button></div></div>`;
+    <div class="mbtns">${S ? '<button type="button" class="btn ghost" data-act="close">Back to game</button>' : ''}<button type="button" class="btn ghost" data-act="ach">Achievements</button><button type="button" class="btn ghost" data-act="aid">Player aid</button><button type="button" class="btn primary" data-act="start">Start game</button></div></div>`;
 }
 
 /* ---------------- render ---------------- */
@@ -342,6 +344,7 @@ function render() {
   if (S && S.ui && S.ui.mode === 'release' && !modal) m = renderRelease();
   else if (modal === 'end') m = renderEnd();
   else if (modal === 'aid') m = renderAid();
+  else if (modal === 'ach') m = renderAchievements();
   else if (modal === 'setup' || !S) m = renderSetup();
   $('#modal').innerHTML = m ? `<div class="scrim">${m}</div>` : '';
 }
@@ -371,6 +374,7 @@ function handle(act, v) {
   switch (act) {
     case 'setup': openModal('setup'); return;
     case 'aid': openModal('aid'); return;
+    case 'ach': openModal('ach'); return;
     case 'close': closeModal(); render(); return;
     case 'stab': setup.tab = v; render(); return;
     case 'snum': setup.n = +v; render(); return;
@@ -455,3 +459,4 @@ document.addEventListener('mouseover', (e) => {
 });
 
 render();
+initScores();

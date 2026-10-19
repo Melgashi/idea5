@@ -691,6 +691,7 @@ function finish() {
   S.phase = 'end';
   S.over = true;
   for (const p of S.players) if (p.debts.length) log(`${p.name} loses ${2 * p.debts.length}★ for unpaid debts.`, p);
+  S.newScores = recordGame();
   render();
   openModal('end');
 }

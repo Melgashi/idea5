@@ -295,6 +295,31 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 .aidt td.t-writer { background: var(--writer); color: #fff; } .aidt td.t-artist { background: var(--artist); color: #fff; } .aidt td.t-producer { background: var(--producer); color: #fff; } .aidt td.t-strat { background: var(--strat); color: #fff; }
 .aidt td.red { color: var(--producer); font-weight: 700; }
 
+/* achievements */
+.modal.ach { width: min(1080px, 100%); }
+.modal.ach h3 { color: var(--ink-2); margin-top: 18px; }
+.ach-sum { margin: 0; }
+.ach-sum b { font-family: var(--display); font-weight: 400; font-size: 18px; color: var(--producer); }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.ach-card { display: flex; flex-direction: column; gap: 2px; background: #fff; border: 2px solid var(--paper-2); border-radius: 10px; padding: 0 10px 10px; overflow: hidden; min-width: 0; }
+.ach-card.cleared { border-color: var(--rep); }
+.ach-head { display: flex; justify-content: space-between; align-items: center; margin: 0 -10px 6px; padding: 4px 10px; background: var(--producer); color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.ach-head.easy { background: var(--writer); }
+.ach-head.multi { background: var(--director); }
+.medal { background: var(--rep); color: var(--ink); border-radius: 50%; width: 20px; height: 20px; display: grid; place-items: center; font-size: 12px; }
+.ach-title { font-size: 15px; }
+.ach-goal { font-size: 12px; color: var(--ink-2); }
+.ach-empty { font-size: 12px; color: var(--ink-2); margin: 10px 0 0; }
+.ach-list { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.ach-list li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto auto; gap: 8px; align-items: center; padding: 4px 6px; border-radius: 6px; background: var(--paper); font-size: 13px; }
+.ach-list li.top { background: #fbf1c7; }
+.ach-rank { font-weight: 700; color: var(--ink-2); text-align: center; }
+.ach-name { min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.ach-name small { display: block; font-size: 11px; color: var(--ink-2); font-weight: 400; }
+.ach-tag { font-size: 10px; font-weight: 700; text-transform: uppercase; border-radius: 99px; padding: 1px 7px; background: var(--paper-2); color: var(--ink-2); }
+.ach-tag.win { background: var(--artist); color: #fff; }
+.ach-score { font-family: var(--display); font-weight: 400; font-size: 16px; font-variant-numeric: tabular-nums; }
+.newbest { margin: 6px 0; padding: 6px 10px; border-radius: 8px; background: #fbf1c7; font-weight: 700; }
 #preview { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: max(16px, env(safe-area-inset-bottom, 0px)); width: 260px; border-radius: 12px; box-shadow: 0 16px 40px rgba(0,0,0,.6); pointer-events: none; z-index: 60; opacity: 0; transform: translateY(8px); transition: opacity .12s, transform .12s; }
 #preview.on { opacity: 1; transform: none; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
@@ -307,6 +332,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
 
 <script src="data.js"></script>
 <script src="game.js"></script>
+<script src="scores.js"></script>
 <script src="ui.js"></script>
 </body>
 </html>

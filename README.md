@@ -17,6 +17,7 @@ python3 -m http.server 8000
 
 - **Multiplayer**: 2–4 studios. Each one can be played by a human (hot-seat on one screen) or by the AI.
 - **Solo challenges**: all 8 Solo Challenge cards, including High-Demand tokens and each card's special rules.
+- **Achievements**: top scores for each solo challenge and for 2, 3 and 4-studio games. Saved in the browser, and privately to your claude.ai account in the published version.
 
 ## What's implemented
 
@@ -36,4 +37,5 @@ Script Part titles, the 20 Trend cards, the 12 Opportunity cards (except Flawles
 - `index.html`: page and styles
 - `data.js`: cards and solo challenges
 - `game.js`: rules engine and AI
+- `scores.js`: achievements and best scores
 - `ui.js`: rendering and input
